@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="tk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VPS IP Maglumatlary</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+
+        body {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            display: flex; justify-content: center; align-items: center;
+            padding: 20px; color: #fff;
+        }
+
+        .container {
+            background: rgba(255,255,255,0.08);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 20px;
+            padding: 30px;
+            width: 100%; max-width: 600px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+            animation: fadeIn 0.8s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        h1 {
+            text-align: center; margin-bottom: 25px; font-size: 22px;
+            background: linear-gradient(90deg, #00c6ff, #0072ff);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+
+        h2 {
+            font-size: 14px; color: #00c6ff; margin: 20px 0 10px;
+            text-transform: uppercase; letter-spacing: 2px;
+        }
+
+        .info-row {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 12px 15px; margin-bottom: 8px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 10px;
+            border-left: 3px solid #00c6ff;
+            transition: all 0.3s ease;
+        }
+
+        .info-row:hover {
+            background: rgba(255,255,255,0.1);
+            transform: translateX(5px);
+        }
+
+        .label { font-weight: 600; color: #a0a0ff; font-size: 13px; }
+        .value {
+            font-family: 'Courier New', monospace;
+            color: #00ffcc; font-size: 13px; font-weight: bold;
+            text-align: right; word-break: break-all; max-width: 60%;
+        }
+
+        .btn {
+            width: 100%; padding: 14px; margin-top: 20px;
+            border: none; border-radius: 12px;
+            background: linear-gradient(90deg, #00c6ff, #0072ff);
+            color: #fff; font-size: 15px; font-weight: bold;
+            cursor: pointer; transition: all 0.3s ease;
+            letter-spacing: 1px;
+        }
+
+        .btn:hover { transform: translateY(-3px); box-shadow: 0 10px 25px rgba(0,114,255,0.5); }
+        .btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+        .loading { text-align: center; padding: 30px; color: #00c6ff; font-size: 16px; }
+        .error { color: #ff4b4b; text-align: center; padding: 20px; }
+        .status { text-align: center; margin-top: 12px; font-size: 12px; color: #888; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌐 VPS IP Maglumatlary</h1>
+        <div id="loading" class="loading">Ýüklenýär... ⏳</div>
+        <div id="content" style="display:none;">
+            <h2>🖥️ Serwer</h2>
+            <div class="info-row"><span class="label">Public IP</span><span class="value" id="pubIP">-</span></div>
+            <div class="info-row"><span class="label">Local IP</span><span class="value" id="locIP">-</span></div>
+            <div class="info-row"><span class="label">Hostname</span><span class="value" id="hostname">-</span></div>
+            <div class="info-row"><span class="label">Platform</span><span class="value" id="platform">-</span></div>
+            <div class="info-row"><span class="label">CPU Ýadro</span><span class="value" id="cpus">-</span></div>
+            <div class="info-row"><span class="label">RAM</span><span class="value" id="ram">-</span></div>
+            <div class="info-row"><span class="label">Uptime</span><span class="value" id="uptime">-</span></div>
+
+            <h2>🌍 Geolokasiýa</h2>
+            <div class="info-row"><span class="label">Şäher</span><span class="value" id="city">-</span></div>
+            <div class="info-row"><span class="label">Sebit</span><span class="value" id="region">-</span></div>
+            <div class="info-row"><span class="label">Ýurt</span><span class="value" id="country">-</span></div>
+            <div class="info-row"><span class="label">Poçta Kody</span><span class="value" id="postal">-</span></div>
+            <div class="info-row"><span class="label">Koordinatlar</span><span class="value" id="coords">-</span></div>
+            <div class="info-row"><span class="label">Wagt Zolagy</span><span class="value" id="timezone">-</span></div>
+            <div class="info-row"><span class="label">ISP</span><span class="value" id="isp">-</span></div>
+            <div class="info-row"><span class="label">ASN</span><span class="value" id="asn">-</span></div>
+        </div>
+        <button class="btn" onclick="loadInfo()">🔄 Täzele</button>
+        <div class="status" id="status"></div>
+    </div>
+
+    <script>
+        async function loadInfo() {
+            const loading = document.getElementById('loading');
+            const content = document.getElementById('content');
+            const status = document.getElementById('status');
+            const btn = document.querySelector('.btn');
+
+            loading.style.display = 'block';
+            content.style.display = 'none';
+            status.textContent = '';
+            btn.disabled = true;
+
+            try {
+                const res = await fetch('/api/info');
+                const data = await res.json();
+                if (!data.success) throw new Error(data.error || 'Ýalňyşlyk');
+
+                const s = data.server, g = data.geo;
+                document.getElementById('pubIP').textContent = s.publicIP;
+                document.getElementById('locIP').textContent = s.localIP;
+                document.getElementById('hostname').textContent = s.hostname;
+                document.getElementById('platform').textContent = s.platform + ' / ' + s.arch;
+                document.getElementById('cpus').textContent = s.cpus + ' ýadro';
+                document.getElementById('ram').textContent = s.freeMemory + ' / ' + s.totalMemory;
+                document.getElementById('uptime').textContent = s.uptime;
+
+                document.getElementById('city').textContent = g.city;
+                document.getElementById('region').textContent = g.region;
+                document.getElementById('country').textContent = g.country + ' ' + getFlag(g.countryCode);
+                document.getElementById('postal').textContent = g.postal;
+                document.getElementById('coords').textContent = g.latitude + ', ' + g.longitude;
+                document.getElementById('timezone').textContent = g.timezone;
+                document.getElementById('isp').textContent = g.isp;
+                document.getElementById('asn').textContent = g.asn;
+
+                loading.style.display = 'none';
+                content.style.display = 'block';
+                status.textContent = '✅ ' + new Date().toLocaleTimeString();
+            } catch (err) {
+                loading.innerHTML = '<span class="error">❌ ' + err.message + '</span>';
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        function getFlag(code) {
+            if (!code || code.length !== 2) return '';
+            return code.toUpperCase().replace(/./g, c => String.fromCodePoint(127397 + c.charCodeAt()));
+        }
+
+        window.addEventListener('load', loadInfo);
+    </script>
+</body>
+</html>
